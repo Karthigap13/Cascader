@@ -1,0 +1,184 @@
+<h1>CASCADER</h1>
+
+
+<div class="row mt-3">
+  <div class="  col" >
+    <div class="cascader-wrapper">
+    <h4>Basic</h4>
+    <app-cascader 
+    [options]="cascaderOptions"
+    [allowClear]="true" 
+    placeholder="Please select" 
+    expandTrigger="click"
+    [changeOnSelect]="false" 
+    [displayRender]="renderDisplay">
+    </app-cascader>
+  </div>
+  </div>
+
+  <div class="col">
+    <div class="cascader-wrapper">
+    <h4>Default value</h4>
+    <app-cascader 
+    [options]="cascaderOptions" 
+    [defaultValue]="['zhejiang', 'hangzhou', 'xihu']"
+    [allowClear]="true"
+    [expandTrigger]="'click'" 
+    [changeOnSelect]="false"
+     placeholder=" Please select">
+    </app-cascader>
+    </div>
+  </div>
+</div>
+
+<div class="row mt-3">
+  <div class="col">
+    <div class="cascader-wrapper">
+   <h4>Custom trigger</h4>
+    <app-cascader
+  [options]="customTriggerOptions"
+  [useInternalTrigger]="true"
+  [expandTrigger]="'click'"
+  [changeOnSelect]="false"
+  [displayRender]="renderDisplay"
+  (onChange)="onChange($event)">
+</app-cascader>
+</div>
+
+  </div>
+
+
+ <div class="col">
+  <div class="cascader-wrapper">
+  <h4>Hover</h4>
+  <app-cascader 
+    [options]="cascaderOptions"
+    [allowClear]="true" 
+    (onChange)="onChange($event)"
+    placeholder="Please select" 
+    [expandTrigger]="'hover'"
+    [changeOnSelect]="false" 
+    [displayRender]="renderDisplay">
+    </app-cascader>
+    </div>
+    
+    
+ </div>
+  
+</div>
+
+
+<div class="row mt-3">
+<div class="col">
+  <div class="cascader-wrapper">
+<h4>Disabled</h4>
+  <app-cascader 
+    [options]="disabledOptions"
+    [allowClear]="true"
+    placeholder="Please select"
+    [expandTrigger]="'click'"
+    [changeOnSelect]="false"
+    [displayRender]="renderDisplay"
+    (onChange)="onChange($event)">
+  </app-cascader>
+  </div>
+
+</div>
+
+<div class="col">
+  <div class="cascader-wrapper">
+  <h4>Change On select</h4>
+  <app-cascader 
+  [options]="cascaderOptions"
+  [allowClear]="true" 
+  (onChange)="onChange($event)"
+  placeholder="Please select" 
+  [expandTrigger]="'click'"
+  [changeOnSelect]="true" 
+  [displayRender]="renderDisplay">
+  </app-cascader>
+  </div>
+</div>
+
+
+</div>
+
+<div class="row mt-3">
+  <div class="col">
+    <div class="cascader-wrapper">
+    <h4>Size</h4>
+  
+    <div style="display: flex; flex-direction: column; gap: 12px;">
+      <app-cascader
+        [options]="cascaderOptions"
+        [size]="'large'"
+        placeholder="Please select"
+        (onChange)="onChange($event)"
+      ></app-cascader>
+  
+      <app-cascader
+        [options]="cascaderOptions"
+        placeholder="Please select"
+        (onChange)="onChange($event)"
+      ></app-cascader>
+  
+      <app-cascader
+        [options]="cascaderOptions"
+        [size]="'small'"
+        placeholder="Please select"
+        (onChange)="onChange($event)"
+      ></app-cascader>
+      </div>
+      
+    </div>
+  </div>
+  
+  
+  <div class="col">
+    <div class="cascader-wrapper">
+    <h4>Lazy Load</h4>
+    <app-cascader 
+  [options]="lazyOptions"
+  [allowClear]="true"
+  placeholder="Please select"
+  [expandTrigger]="'click'"
+  [changeOnSelect]="true"
+  (loadData)="loadData($event)"
+  (onChange)="onChange($event)">
+</app-cascader>
+    </div>
+  
+  </div>
+  </div>
+
+
+  <div class="row mt-3">
+    <div class="col">
+    <div class="cascader-wrapper">
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <app-cascader variant="borderless"></app-cascader>
+        <app-cascader variant="filled"></app-cascader>
+        <app-cascader variant="outlined"></app-cascader>
+        <app-cascader variant="underlined"></app-cascader>
+      </div>
+    </div>
+    </div>
+    
+    <div class="col">
+      <app-cascader 
+      [options]="cascaderOptions"
+      [allowClear]="true" 
+      (onChange)="onChange($event)"
+      placeholder="Please select" 
+      [expandTrigger]="'hover'"
+      [changeOnSelect]="false" 
+      [displayRender]="renderDisplay">
+      </app-cascader>
+    
+    </div>
+    
+    
+    </div>
+      
+
+

@@ -1,0 +1,74 @@
+   <div   >
+    <div class="input-container" (mouseenter)="hovering = true" (mouseleave)="hovering = false">
+  
+      
+      <ng-container *ngIf="customTrigger; else internalOrDefault"></ng-container>
+  
+     
+      <ng-template #internalOrDefault>
+        <ng-container *ngIf="useInternalTrigger; else defaultInput">
+          <span>{{ displayValue || 'Unselect' }}</span>
+          &nbsp;
+          <a  class="change-city-link" (click)="openDropdown()">Change City</a>
+        </ng-container>
+      </ng-template>
+  
+      
+      <ng-template #defaultInput>
+        <input
+          type="text"
+          [value]="displayValue"
+          (click)="openDropdown()"
+          [placeholder]="placeholder"
+          [disabled]="disabled"
+          [ngStyle]="{
+            color: inputTextColor
+          }"
+          [ngClass]="size"
+        />
+      </ng-template>
+  
+     
+      <span *ngIf="!customTrigger && !useInternalTrigger" class="icon" (click)="toggleOrClear()">
+        <ng-container *ngIf="allowClear && hovering && finalValue; else dropdownIcon">
+           <i class="bi bi-x-lg"></i>
+        </ng-container>
+        <ng-template #dropdownIcon> 
+          <i class="bi bi-chevron-down"></i>
+        </ng-template>
+      </span>
+  
+    </div>
+  
+    <div *ngIf="showDropdown" class="dropdown">
+      <ng-container *ngFor="let levelIndex of dropdownLevels">
+        <div class="column">
+          <ul>
+            <li
+              *ngFor="let option of getColumnOptions(levelIndex)"
+              (click)=" option.disabled ? $event.stopPropagation() : (shouldSelectOnClick(option) && selectOption(option, levelIndex))"
+
+              (mouseenter)="onOptionHover(option, levelIndex)"
+              [class.active]="selectedPath[levelIndex]?.value === option.value"
+              [class.disabled]="option.disabled"
+            >
+              {{ option.label }}
+              
+              <span class="live-loader" *ngIf="option.loading">
+                <!-- <i class="bi bi-arrow-clockwise spin"></i> -->
+  <!-- a spinner icon (you can style it to rotate) -->
+              </span>
+              <span *ngIf="!option.loading && (!option.isLeaf || (option.children && option.children.length))">
+                <i class="bi bi-chevron-right"></i>
+              </span>
+              
+            </li>
+          </ul>
+        </div>
+      </ng-container>
+    </div>
+  </div>
+  
+  
+  
+  
