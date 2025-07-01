@@ -1,34 +1,31 @@
-import { Component, Input , OnInit , ChangeDetectorRef } from '@angular/core';
+import { Component, Input , OnInit , ChangeDetectorRef, ChangeDetectionStrategy } from '@angular/core';
 import {ContentChild, TemplateRef, AfterContentInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Option } from '../config/option.interface';
+import { ElementRef, HostListener } from '@angular/core';
+import { Option  , CascaderConfig, CascaderEvent} from '../config/option.interface';
+import { FormsModule } from '@angular/forms';
 import { EventEmitter, Output } from '@angular/core';
 
 
 @Component({
   selector: 'app-cascader',
   standalone: true,
-  imports: [CommonModule],
+  changeDetection: ChangeDetectionStrategy.OnPush, 
+  imports: [CommonModule , FormsModule],
   templateUrl: './cascader.component.html',
   styleUrl: './cascader.component.css'
 })
 export class CascaderComponent {
   @Input() options: Option[] = [];
-  @Input() allowClear : boolean = true;
-  @Input() disabled = false;
-  @Input() placeholder : string = 'Select option';
-  @Input() expandTrigger: 'click' | 'hover' = 'click';
-  @Input() changeOnSelect : boolean = false;
-  @Input() defaultValue: string[] = [];
+  @Input() config: CascaderConfig = {};
   @Input() useInternalTrigger: boolean = false;
-  @Input() size: 'small' | 'middle' | 'large' = 'middle';
-  @Output() loadData = new EventEmitter<Option>();
-
-
-
-
+  @Input() loadDataFn?: (option: Option) => Promise<Option[]>;   // clean async handler
   @Output() onChange = new EventEmitter<{ value: string[]; selectedOptions: Option[] }>();
-  @Input() displayRender: (labels: string[]) => string = (labels) => labels.join(' / ');
+ // @Output() onChange = new EventEmitter<{ value: string[]; selectedOptions: Option[] }>();
+ //@Output() onChange = new EventEmitter<CascaderEvent<{ value: string[]; selectedOptions: Option[] }>>();
+
+  @Input() displayRender: (labels: string[], selectedOptions: Option[]) => string = 
+  (labels, _) => labels.join(' / ');
   @ContentChild(TemplateRef) customTrigger!: TemplateRef<any>;
 
   hasCustomTrigger = false;
@@ -38,152 +35,179 @@ export class CascaderComponent {
   hovering = false;  
   selectionComplete: boolean= false;
   
-  constructor(private cdr: ChangeDetectorRef) { }
+  private _dropdownLevels: number[] = [];
+  private _lastSelectedPathSnapshot: string = '';
+  constructor(private elementRef: ElementRef) {}
+   private _columnOptionsCache: { [level: number]: Option[] } = {};
+
+
+  @HostListener('document:click', ['$event'])
+onDocumentClick(event: MouseEvent): void {
+  // If dropdown is open, and click is outside this component, close it
+  if (this.showDropdown && !this.elementRef.nativeElement.contains(event.target)) {
+    this.showDropdown = false;
+  }
+}
 
   ngOnInit() {
-    if (this.defaultValue && this.defaultValue.length) {
+    
+    if (!Array.isArray(this.options)) {
+      console.warn('[Cascader] options input is not an array.');
+      return;
+    }
+  
+    if (this.config.defaultValue && this.config.defaultValue.length) {
       this.selectedPath = [];
       let options = this.options;
-      for (const val of this.defaultValue) {
+  
+      for (const val of this.config.defaultValue) {
+        if (!Array.isArray(options)) {
+          console.warn(`[Cascader] Invalid options structure while resolving value "${val}".`);
+          break;
+        }
+  
         const found = options.find(o => o.value === val);
         if (found) {
           this.selectedPath.push(found);
           options = found.children || [];
         } else {
-          break; 
+          console.warn(`[Cascader] Value "${val}" not found in options.`);
+          break;
         }
       }
-      this.finalValue = this.displayRender(this.selectedPath.map(o => o.label));
+  
+      if (this.selectedPath.length > 0) {
+        this.finalValue = this.displayRender(
+          this.selectedPath.map(o => o.label),
+          this.selectedPath
+        );
+      } else {
+        console.warn('[Cascader] Default value path could not be resolved.');
+      }
     }
   }
-
+  
   ngAfterContentInit() {
     this.hasCustomTrigger = !!this.customTrigger;
   }
 
   openDropdown() {
-    if (this.disabled) return;
+    if (this.config.disabled) return;
     this.showDropdown = !this.showDropdown;
   }
 
   clearSelection() {
+    this._columnOptionsCache = {};  
     this.selectedPath = [];
     this.finalValue = '';
     this.showDropdown = false;
+   
   }
 
   toggleOrClear() {
-    if (this.allowClear && this.hovering && this.finalValue) {
-      console.log('allowClear:', this.allowClear);
+    if (this.config.allowClear && this.hovering && this.finalValue) {
+      console.log('allowClear:', this.config.allowClear);
       this.clearSelection();
     } else {
       this.openDropdown();
     }
   }
   
-  logClick() {
-    console.log('Icon clicked');
-  }
-  
-  // selectOption(option: Option, level: number) {
-  //   this.selectedPath = this.selectedPath.slice(0, level);   // Trim the selectedPath array up to this level
-  //   this.selectedPath[level] = option;
-
-  //   if (this.changeOnSelect || !option.children || option.children.length === 0) {
-  //     this.finalValue = this.displayRender(this.selectedPath.map(o => o.label));
-  //     if (!option.children || option.children.length === 0) {
-  //       this.showDropdown = false;
-  //       //this.selectedPath = [];
-
-  //       if (this.changeOnSelect) {
-  //         this.selectionComplete = true;  // <-- only set if changeOnSelect true
-  //       }
-
-  //       if (option.isLeaf === false && !option.children) {
-  //         option.loading = true;
-  //         this.loadData.emit(option);
-  //         return;
-  //       }
-  //       // Emit onChange event here
-  // this.onChange.emit({
-  //   value: this.selectedPath.map(o => o.value),
-  //   selectedOptions: this.selectedPath
-  // });
-  //     }
-  //   }
-  // }
-
-
-  selectOption(option: Option, level: number) {
-    this.selectedPath = this.selectedPath.slice(0, level);
-    this.selectedPath[level] = option;
-  
-    const isLeaf = option.isLeaf ?? (!option.children || option.children.length === 0);
-  
-    // Lazy load if needed
-    if (option.isLeaf === false && !option.children) {
+ selectOption(option: Option, level: number) {   // Called when an option is selected in the dropdown panel
+  this._columnOptionsCache = {};  // clear cache on clear
+  this.selectedPath = [
+    ...this.selectedPath.slice(0, level),
+    option
+  ];  // Keep selected options up to the current level and remove any deeper levels
+    this.selectedPath[level] = option;  // Add the newly selected option at the current level
+    const isLeaf = option.isLeaf ?? (!option.children || option.children.length === 0);   // Check if the selected option is a leaf node (no children)
+    
+     //  async lazy load if needed
+     if (!isLeaf && !option.children && this.loadDataFn) {
       option.loading = true;
-      this.loadData.emit(option);
+      this.loadDataFn(option).then(children => {
+        option.children = children;
+        option.loading = false;
+        this._lastSelectedPathSnapshot = '';
+      }).catch(() => {
+        option.loading = false;
+        console.error('Failed to load children for option', option);
+      });
     }
   
-    if (this.changeOnSelect || isLeaf) {
-      this.finalValue = this.displayRender(this.selectedPath.map(o => o.label));
-  
+    if (this.config.changeOnSelect || isLeaf) {
+      this.finalValue = this.displayRender(  // Use displayRender function to convert selected labels into display string
+        this.selectedPath.map(o => o.label),
+        this.selectedPath  // Full selected option objects path
+      );
       if (isLeaf) {
         this.showDropdown = false;
       }
-  
+      // Emit onChange event to parent component with selected values and options
       this.onChange.emit({
         value: this.selectedPath.map(o => o.value),
-        selectedOptions: this.selectedPath
+          selectedOptions: this.selectedPath
       });
-  
-      if (this.changeOnSelect) {
+
+      if (this.config.changeOnSelect) {
         this.selectionComplete = true;
       }
     }
   }
+ 
   
 
-
-
-  getColumnOptions(level: number) {
-    if (level === 0) {
-      return this.options;
-    }
-    const parent = this.selectedPath[level - 1];
-    return parent && parent.children ? parent.children : [];
+getColumnOptions(level: number) {
+  if (this._columnOptionsCache[level]) {
+    return this._columnOptionsCache[level];
   }
 
-  get inputTextColor() {
-    if (!this.changeOnSelect) {
-      return '#000'; // always black if not using changeOnSelect
-    }
-    return this.selectionComplete ? '#000' : '#888';
-  }
-  
- get dropdownLevels() {
-  const levels = [];
-  let level = 0;
-  let options = this.options;
+  const options = level === 0
+    ? this.options
+    : this.selectedPath[level - 1]?.children || [];
 
-  while (true) {
-    levels.push(level);
-    const selected = this.selectedPath[level];
-    if (selected && selected.children && selected.children.length > 0) {
-      options = selected.children;
-      level++;
-    } else {
-      break;
-    }
-  }
-
-  return levels;
+  this._columnOptionsCache[level] = options;
+  return options;
 }
+
+  getInputColorClass() {
+    if (!this.config.changeOnSelect) {
+      return 'input-default';
+    }
+    return this.selectionComplete ? 'input-default' : 'input-placeholder';
+  }
+  
+  
+  get dropdownLevels() {
+    const currentSnapshot = JSON.stringify(this.selectedPath.map(o => o.value));
+    if (currentSnapshot !== this._lastSelectedPathSnapshot) {
+      this._lastSelectedPathSnapshot = currentSnapshot;
+      this._dropdownLevels = this.computeDropdownLevels();
+    }
+  return this._dropdownLevels;
+  }
+  
+  private computeDropdownLevels(): number[] {
+    const levels = [];
+    let level = 0;
+    let options = this.options;
+  
+    while (true) {
+      levels.push(level);
+      const selected = this.selectedPath[level];
+      if (selected && selected.children && selected.children.length > 0) {
+        options = selected.children;
+        level++;
+      } else {
+        break;
+      }
+    }
+    return levels;
+  }
+  
 
   get displayValue() {
     return this.finalValue;
-    console.log(this.finalValue)
   }
 
   
@@ -191,13 +215,24 @@ export class CascaderComponent {
     if (option.disabled) {
       return false;
     }
-    return this.expandTrigger === 'click' || !option.children;
+    return this.config.expandTrigger === 'click' || !option.children;
   }
   
   
   onOptionHover(option: Option, level: number) {
-    if (this.expandTrigger === 'hover' && option.children && option.children.length > 0) {
+    if (this.config.expandTrigger === 'hover' && option.children && option.children.length > 0) {
       this.selectOption(option, level);
     }
   }
+
+  isIconClass(value: string): boolean {
+    if (!value) return false;
+    return value.includes(' ') || value.startsWith('bi');
+  }
+  
+  
+  trackByValue(index: number, option: Option): any {
+    return option.value;
+  }
+  
 }

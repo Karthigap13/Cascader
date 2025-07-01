@@ -1,74 +1,85 @@
-   <div   >
-    <div class="input-container" (mouseenter)="hovering = true" (mouseleave)="hovering = false">
-  
-      
-      <ng-container *ngIf="customTrigger; else internalOrDefault"></ng-container>
-  
-     
-      <ng-template #internalOrDefault>
-        <ng-container *ngIf="useInternalTrigger; else defaultInput">
-          <span>{{ displayValue || 'Unselect' }}</span>
-          &nbsp;
-          <a  class="change-city-link" (click)="openDropdown()">Change City</a>
+<div>
+  <div class="input-container" [ngClass]="[config.variant || '', config.status ? 'status-' + config.status : '']"
+    (mouseenter)="hovering = true" (mouseleave)="hovering = false">
+
+    <ng-container *ngIf="customTrigger; else internalOrDefault">
+      <ng-container *ngTemplateOutlet="customTrigger"></ng-container>
+    </ng-container>
+    <ng-template #internalOrDefault>
+      <ng-container *ngIf="useInternalTrigger; else defaultInput">
+        <span>{{ displayValue || 'Unselect' }}</span>
+        &nbsp;
+        <a class="change-city-link" (click)="openDropdown()">Change City</a>
+      </ng-container>
+    </ng-template>
+
+    <ng-template #defaultInput>
+      <div class="input-wrapper">
+        <span *ngIf="config.prefixIcon" class="prefix-icon">
+          <i [class]="config.prefixIcon"></i>
+        </span>
+        <input type="text" readonly [value]="displayValue" (click)="openDropdown()" [placeholder]="config.placeholder"
+          [disabled]="config.disabled" [ngClass]="[getInputColorClass(), config.size || '']" />
+      </div>
+    </ng-template>
+
+    <span *ngIf="!customTrigger && !useInternalTrigger" class="icon" (click)="toggleOrClear()">
+      <ng-container *ngIf="config.allowClear && hovering && finalValue; else iconPriority">
+        <i class="bi bi-x-lg"></i>
+      </ng-container>
+      <ng-template #iconPriority>
+        <ng-container *ngIf="config.suffixIcon; else defaultIcon">
+          <ng-container *ngIf="isIconClass(config.suffixIcon); else textSuffix">
+            <i [class]="config.suffixIcon"></i>
+          </ng-container>
+          <ng-template #textSuffix>
+            {{ config.suffixIcon }}
+          </ng-template>
         </ng-container>
-      </ng-template>
-  
-      
-      <ng-template #defaultInput>
-        <input
-          type="text"
-          [value]="displayValue"
-          (click)="openDropdown()"
-          [placeholder]="placeholder"
-          [disabled]="disabled"
-          [ngStyle]="{
-            color: inputTextColor
-          }"
-          [ngClass]="size"
-        />
-      </ng-template>
-  
-     
-      <span *ngIf="!customTrigger && !useInternalTrigger" class="icon" (click)="toggleOrClear()">
-        <ng-container *ngIf="allowClear && hovering && finalValue; else dropdownIcon">
-           <i class="bi bi-x-lg"></i>
-        </ng-container>
-        <ng-template #dropdownIcon> 
+        <ng-template #defaultIcon>
           <i class="bi bi-chevron-down"></i>
         </ng-template>
-      </span>
-  
-    </div>
-  
-    <div *ngIf="showDropdown" class="dropdown">
+      </ng-template>
+    </span>
+  </div>
+
+
+  <div *ngIf="showDropdown" class="dropdown">
+    <ng-container *ngIf="options && options.length; else noData">
       <ng-container *ngFor="let levelIndex of dropdownLevels">
         <div class="column">
           <ul>
-            <li
-              *ngFor="let option of getColumnOptions(levelIndex)"
+            <li *ngFor="let option of getColumnOptions(levelIndex) ; trackBy: trackByValue"
               (click)=" option.disabled ? $event.stopPropagation() : (shouldSelectOnClick(option) && selectOption(option, levelIndex))"
-
               (mouseenter)="onOptionHover(option, levelIndex)"
-              [class.active]="selectedPath[levelIndex]?.value === option.value"
-              [class.disabled]="option.disabled"
-            >
+              [class.active]="selectedPath[levelIndex]?.value === option.value" [class.disabled]="option.disabled">
               {{ option.label }}
-              
-              <span class="live-loader" *ngIf="option.loading">
-                <!-- <i class="bi bi-arrow-clockwise spin"></i> -->
-  <!-- a spinner icon (you can style it to rotate) -->
-              </span>
+              <span class="live-loader" *ngIf="option.loading"></span>
               <span *ngIf="!option.loading && (!option.isLeaf || (option.children && option.children.length))">
-                <i class="bi bi-chevron-right"></i>
+                <ng-container *ngIf="config.expandIcon && isIconClass(config.expandIcon); else defaultIconOrText">
+                  <i [class]="config.expandIcon"></i>
+                </ng-container>
+                <ng-template #defaultIconOrText>
+                  <ng-container *ngIf="config.expandIcon; else defaultIcon">
+                    {{config.expandIcon }}
+                  </ng-container>
+                  <ng-template #defaultIcon>
+                    <i class="bi bi-chevron-right"></i>
+                  </ng-template>
+                </ng-template>
               </span>
-              
             </li>
           </ul>
         </div>
       </ng-container>
-    </div>
+    </ng-container>
+
+    <ng-template #noData>
+      <div class="no-data-container">
+        <i class="bi bi-envelope-open"></i>
+        <div class="no-data">No data</div>
+      </div>
+    </ng-template>
+
   </div>
-  
-  
-  
-  
+</div>
